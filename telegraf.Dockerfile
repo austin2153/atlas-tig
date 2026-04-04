@@ -1,16 +1,14 @@
 FROM telegraf:1.38.2
 
-# Install Python and requests (Telegraf uses Debian/Ubuntu base)
+# Install Python and pip (Telegraf uses Debian/Ubuntu base)
 RUN apt-get update && apt-get install -y python3 python3-pip
 
-# Install Python dependencies using --break-system-packages flag
-RUN pip3 install --break-system-packages requests
-
-# Create scripts directory
+# Create scripts directory and copy scripts
 RUN mkdir -p /app/scripts
-
-# Copy all custom scripts (extensible!)
 COPY ./telegraf/scripts/ /app/scripts/
+
+# Install Python dependencies from requirements.txt
+RUN pip3 install --break-system-packages -r /app/scripts/requirements.txt
 
 # Make all scripts executable
 RUN chmod +x /app/scripts/*
