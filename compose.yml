@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  # InfluxDB - Time series database for metrics storage
+  influxdb:
+    image: influxdb:3.9.0-core
+    container_name: influxdb
+    ports:
+      - "8181:8181"
+    command: >
+      influxdb3 serve
+      --node-id atlas-node
+      --object-store file
+      --data-dir /home/influxdb3/.influxdb3
+      --admin-token-file /etc/influxdb3/admin-token.txt
+    volumes:
+      - influxdb3-data:/home/influxdb3/.influxdb3
+      - ./influxdb-admin-token.txt:/etc/influxdb3/admin-token.txt:ro
+    restart: unless-stopped
+    networks:
+      - tig-network
+
+  # InfluxDB 3 Explorer - Official web UI for InfluxDB 3 Core
+  influxdb-explorer:
+    image: docker.io/influxdata/influxdb3-ui:latest
+    container_name: influxdb-explorer
+    ports:
+      - "8888:80"
+      - "8889:8888"
+    command: --mode=admin
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+    networks:
+      - tig-network
+
+  # Telegraf - Metrics collection agent
+  telegraf:
+    build:
+      context: .
+      dockerfile: telegraf.Dockerfile
+    container_name: telegraf
+    privileged: true  # Required for Podman compatibility
+    cap_add:
+      - SETUID
+      - SETGID  # Required for Podman permission handling
+    user: root  # Required to read secret files
+    depends_on:
+      - influxdb
+    environment:
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      UNIFI_CONSOLE_ID: ${UNIFI_CONSOLE_ID}
+      UNIFI_API_KEY: ${UNIFI_API_KEY}
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro  # Read-only config mount
+    restart: unless-stopped
+    networks:
+      - tig-network
+
+  # Grafana - Visualization and dashboarding
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: ""
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    networks:
+      - tig-network
+
+# Persistent volumes for data storage
+volumes:
+  influxdb3-data:  # Database data persistence
+  grafana-data:  # Grafana dashboards and settings
+
+# Network configuration for service communication
+networks:
+  tig-network:
+    driver: bridge

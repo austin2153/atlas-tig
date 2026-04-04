@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8181
+    database: atlas
+    jsonData:
+      version: InfluxQL
+      httpMode: GET
+      tlsSkipVerify: true
+    secureJsonData:
+      password: $__env{INFLUXDB_TOKEN}
+    editable: true
+    isDefault: true

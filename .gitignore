@@ -1,0 +1,13 @@
+# Environment variables with secrets
+.env
+.env.local
+.env.*.local
+
+# Secret files
+*.token
+*.password
+.unifi-password
+.influxdb2-admin-*
+temp/
+
+influxdb-admin-token.txt
