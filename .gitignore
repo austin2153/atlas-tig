@@ -11,3 +11,4 @@
 temp/
 
 influxdb-admin-token.txt
+influxdb-explorer/config/config.json

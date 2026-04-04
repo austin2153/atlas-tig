@@ -2,6 +2,8 @@ version: "3.8"
 
 services:
   # InfluxDB - Time series database for metrics storage
+  # Docker Hub: https://hub.docker.com/_/influxdb
+  # Docs: https://docs.influxdata.com/influxdb3/core/
   influxdb:
     image: influxdb:3.9.0-core
     container_name: influxdb
@@ -11,23 +13,30 @@ services:
       influxdb3 serve
       --node-id atlas-node
       --object-store file
-      --data-dir /home/influxdb3/.influxdb3
+      --data-dir /var/lib/influxdb3/data
+      --plugin-dir /var/lib/influxdb3/plugins
       --admin-token-file /etc/influxdb3/admin-token.txt
     volumes:
-      - influxdb3-data:/home/influxdb3/.influxdb3
+      - influxdb3-data:/var/lib/influxdb3/data
+      - influxdb3-plugins:/var/lib/influxdb3/plugins
       - ./influxdb-admin-token.txt:/etc/influxdb3/admin-token.txt:ro
     restart: unless-stopped
     networks:
       - tig-network
 
   # InfluxDB 3 Explorer - Official web UI for InfluxDB 3 Core
+  # Docker Hub: https://hub.docker.com/r/influxdata/influxdb3-ui
+  # Docs: https://docs.influxdata.com/influxdb3/explorer/
   influxdb-explorer:
-    image: docker.io/influxdata/influxdb3-ui:latest
+    image: docker.io/influxdata/influxdb3-ui:1.6.3
     container_name: influxdb-explorer
     ports:
       - "8888:80"
       - "8889:8888"
     command: --mode=admin
+    volumes:
+      - ./influxdb-explorer/config:/app-root/config:ro
+      - influxdb-explorer-db:/db:rw
     depends_on:
       - influxdb
     restart: unless-stopped
@@ -35,6 +44,8 @@ services:
       - tig-network
 
   # Telegraf - Metrics collection agent
+  # Docker Hub: https://hub.docker.com/_/telegraf
+  # Docs: https://docs.influxdata.com/telegraf/
   telegraf:
     build:
       context: .
@@ -49,8 +60,9 @@ services:
       - influxdb
     environment:
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
-      UNIFI_CONSOLE_ID: ${UNIFI_CONSOLE_ID}
-      UNIFI_API_KEY: ${UNIFI_API_KEY}
+      # UNIFI variables below are optional - only needed if using custom UniFi scripts
+      UNIFI_CONSOLE_ID: ${UNIFI_CONSOLE_ID:-}
+      UNIFI_API_KEY: ${UNIFI_API_KEY:-}
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro  # Read-only config mount
     restart: unless-stopped
@@ -58,6 +70,8 @@ services:
       - tig-network
 
   # Grafana - Visualization and dashboarding
+  # Docker Hub: https://hub.docker.com/r/grafana/grafana
+  # Docs: https://grafana.com/docs/grafana/latest/
   grafana:
     image: grafana/grafana:11.0.0
     container_name: grafana
@@ -80,6 +94,8 @@ services:
 # Persistent volumes for data storage
 volumes:
   influxdb3-data:  # Database data persistence
+  influxdb3-plugins:  # InfluxDB plugins directory
+  influxdb-explorer-db:  # InfluxDB Explorer UI database
   grafana-data:  # Grafana dashboards and settings
 
 # Network configuration for service communication

@@ -22,7 +22,10 @@ if [ -z "$INFLUXDB_TOKEN" ]; then
     echo "Starting InfluxDB to generate admin token..."
     echo ""
     
-    # Start only InfluxDB without token file
+    # Create temporary dummy token file (required for container to start)
+    echo '{"name": "temp", "token": "temp-token-will-be-replaced"}' > influxdb-admin-token.txt
+    
+    # Start only InfluxDB
     docker compose up -d influxdb
     
     # Wait for InfluxDB to be ready
@@ -57,6 +60,11 @@ if [ -z "$INFLUXDB_TOKEN" ]; then
     
     # Set INFLUXDB_TOKEN for current session
     INFLUXDB_TOKEN="$NEW_TOKEN"
+    
+    # Restart InfluxDB with real token
+    echo "Restarting InfluxDB with new token..."
+    docker compose restart influxdb
+    sleep 3
 fi
 
 # Generate token file from .env
@@ -65,6 +73,13 @@ echo "{\"name\": \"admin\", \"token\": \"$INFLUXDB_TOKEN\"}" > influxdb-admin-to
 chmod 644 influxdb-admin-token.txt
 
 echo "Token file created"
+
+# Generate InfluxDB Explorer config from template
+echo "Generating InfluxDB Explorer config..."
+sed "s|\${INFLUXDB_TOKEN}|$INFLUXDB_TOKEN|g" influxdb-explorer/config/config.json.template > influxdb-explorer/config/config.json
+chmod 644 influxdb-explorer/config/config.json
+
+echo "Explorer config created"
 
 # Deploy all services
 echo "Starting all services..."
