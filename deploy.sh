@@ -8,8 +8,8 @@ echo "Deploying InfluxDB 3 Core stack..."
 
 # Check if .env exists
 if [ ! -f .env ]; then
-    echo "Creating .env file..."
-    touch .env
+    echo "Creating .env file from template..."
+    cp .env.example .env 2>/dev/null || touch .env
 fi
 
 # Source .env to get INFLUXDB_TOKEN if it exists
@@ -19,11 +19,21 @@ source .env 2>/dev/null || true
 if [ -z "$INFLUXDB_TOKEN" ]; then
     echo ""
     echo "First-time deployment detected (no INFLUXDB_TOKEN in .env)"
+    
+    # Generate secure Grafana password if not set
+    if [ -z "$GRAFANA_ADMIN_PASSWORD" ]; then
+        echo "Generating secure Grafana admin password..."
+        GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 24)
+        echo "GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD" >> .env
+        echo "Grafana password generated and saved to .env"
+    fi
+    
     echo "Starting InfluxDB to generate admin token..."
     echo ""
     
     # Create temporary dummy token file (required for container to start)
-    echo '{"name": "temp", "token": "temp-token-will-be-replaced"}' > influxdb-admin-token.txt
+    # Must use apiv3_ prefix - InfluxDB validates token format
+    echo '{"name": "temp", "token": "apiv3_temp-bootstrap-token-will-be-replaced-by-real-token"}' > influxdb-admin-token.txt
     
     # Start only InfluxDB
     docker compose up -d influxdb
@@ -34,13 +44,17 @@ if [ -z "$INFLUXDB_TOKEN" ]; then
     
     # Create admin token
     echo "Creating admin token..."
+    set +e  # Temporarily disable exit on error (docker exec may return non-zero but still output token)
     TOKEN_OUTPUT=$(docker exec influxdb influxdb3 create token --admin 2>&1)
+    EXEC_EXIT_CODE=$?
+    set -e  # Re-enable exit on error
     
-    # Extract the token from output
-    NEW_TOKEN=$(echo "$TOKEN_OUTPUT" | grep "^Token:" | awk '{print $2}')
+    # Extract the token from output (look for any line containing "Token:")
+    NEW_TOKEN=$(echo "$TOKEN_OUTPUT" | grep "Token:" | head -1 | awk '{print $2}')
     
     if [ -z "$NEW_TOKEN" ]; then
-        echo "Error: Failed to create token"
+        echo "Error: Failed to extract token from output"
+        echo "Full output:"
         echo "$TOKEN_OUTPUT"
         exit 1
     fi
@@ -89,7 +103,8 @@ echo ""
 echo "Deployment complete!"
 echo ""
 echo "Services:"
-echo "  - InfluxDB:  http://rocky-linux.atlas.local:8181"
 echo "  - Explorer:  http://rocky-linux.atlas.local:8888"
-echo "  - Grafana:   http://rocky-linux.atlas.local:3000"
+echo "  - Grafana:   http://rocky-linux.atlas.local:3000 (admin / see .env for password)"
+echo ""
+echo "IMPORTANT: Grafana admin password is in .env file. Keep it secure!"
 echo ""

@@ -19,6 +19,7 @@ services:
     volumes:
       - influxdb3-data:/var/lib/influxdb3/data
       - influxdb3-plugins:/var/lib/influxdb3/plugins
+      # First run: deploy.sh runs 'docker exec influxdb influxdb3 create token --admin', saves to .env, generates this file
       - ./influxdb-admin-token.txt:/etc/influxdb3/admin-token.txt:ro
     restart: unless-stopped
     networks:

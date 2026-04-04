@@ -1,14 +1,6 @@
 # Environment variables with secrets
 .env
-.env.local
-.env.*.local
 
-# Secret files
-*.token
-*.password
-.unifi-password
-.influxdb2-admin-*
-temp/
-
+# Auto-generated files with secrets
 influxdb-admin-token.txt
 influxdb-explorer/config/config.json
