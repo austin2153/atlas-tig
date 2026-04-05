@@ -10,7 +10,22 @@ datasources:
       version: InfluxQL
       httpMode: GET
       tlsSkipVerify: true
+      httpHeaderName1: "Authorization"
     secureJsonData:
-      password: $__env{INFLUXDB_TOKEN}
+      httpHeaderValue1: "Token $__env{INFLUXDB_TOKEN}"
     editable: true
     isDefault: true
+
+  - name: InfluxDB — Solar System
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8181
+    database: solar_system
+    jsonData:
+      version: InfluxQL
+      httpMode: GET
+      tlsSkipVerify: true
+      httpHeaderName1: "Authorization"
+    secureJsonData:
+      httpHeaderValue1: "Token $__env{INFLUXDB_TOKEN}"
+    editable: true
