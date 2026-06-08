@@ -36,8 +36,8 @@ On first run, `deploy.sh` creates:
 ### Access the Stack
 
 After deployment completes:
-- **InfluxDB Explorer**: http://rocky-linux.atlas.local:8888 (auto-connected, no login needed)
-- **Grafana**: http://rocky-linux.atlas.local:3000
+- **InfluxDB Explorer**: http://localhost:8888 (auto-connected, no login needed)
+- **Grafana**: http://localhost:3000
   - Username: `admin`
   - Password: Check `.env` file for `GRAFANA_ADMIN_PASSWORD`
 
